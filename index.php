@@ -43,7 +43,7 @@ dispatch('/', 'blog_posts_home');
   }
 
 # matches GET /posts  
-dispatch('/posts', 'blog_posts_index')
+dispatch('/posts', 'blog_posts_index');
   function blog_posts_index()
   {
     $posts = post_find_all();
