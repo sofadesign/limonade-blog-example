@@ -11,8 +11,8 @@ function configure()
 	$db = new PDO($slcted_db);
 	$db->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
   option('env', $env);
-	option('dsn', $dsn);
 	option('db_conn', $db);
+	setlocale(LC_TIME, "fr_FR");
 }
 
 
@@ -78,7 +78,7 @@ dispatch('/posts/new', 'blog_posts_new')
 dispatch_post('/posts', 'blog_posts_create')
   function blog_posts_create()
   { 
-    if($post_id = post_create($_POSTS))
+    if($post_id = post_create($_POST['post']))
     {
       redirect(url_for('posts', $post_id));
     }
@@ -107,7 +107,7 @@ dispatch_put('/posts/:id', 'blog_posts_update')
   function blog_posts_update()
   {
     $post_id = params('id');
-    if(post_update($post_id, $_POSTS))
+    if(post_update($post_id, $_POST['post']))
     {
       redirect(url_for('posts', $post_id));
     }
