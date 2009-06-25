@@ -37,7 +37,7 @@ dispatch('/', 'blog_posts_home');
 dispatch('/posts', 'blog_posts_index')
   function blog_posts_index()
   {
-    $posts = posts_find_all();
+    $posts = post_find_all();
     set('posts', $posts);
     html('posts/index.html.php');
   }
@@ -46,7 +46,7 @@ dispatch('/posts', 'blog_posts_index')
 dispatch('/posts/:id', 'blog_posts_show')
   function blog_posts_show()
   { 
-    if( $post = posts_find(params('id')) )
+    if( $post = post_find(params('id')) )
     {
       set('post', $post);
       html('posts/show.html.php');
@@ -69,7 +69,7 @@ dispatch('/posts/new', 'blog_posts_new')
 dispatch_post('/posts', 'blog_posts_create')
   function blog_posts_create()
   { 
-    if($post_id = posts_create($_POSTS))
+    if($post_id = post_create($_POSTS))
     {
       redirect(url_for('posts', $post_id));
     }
@@ -83,7 +83,7 @@ dispatch_post('/posts', 'blog_posts_create')
 dispatch('/posts/:id/edit', 'blog_posts_edit')
   function blog_posts_edit()
   {
-    if($post = posts_find(params('id')))
+    if($post = post_find(params('id')))
     {
       html('posts/edit.html.php');
     }
@@ -98,7 +98,7 @@ dispatch_put('/posts/:id', 'blog_posts_update')
   function blog_posts_update()
   {
     $post_id = params('id');
-    if(posts_update($post_id, $_POSTS))
+    if(post_update($post_id, $_POSTS))
     {
       redirect(url_for('posts', $post_id));
     }
@@ -113,7 +113,7 @@ dispatch_delete('/posts/:id', 'blog_posts_destroy')
   function blog_posts_destroy()
   {
     $post_id = params('id');
-    if($post = posts_destroy($post_id))
+    if($post = post_destroy($post_id))
     {
       redirect(url_for('posts'));
     }
