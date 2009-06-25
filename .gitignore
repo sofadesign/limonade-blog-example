@@ -1,2 +1,4 @@
 #ignore all files .DS_Store
 .DS_Store
+#ignore db files
+*.db
