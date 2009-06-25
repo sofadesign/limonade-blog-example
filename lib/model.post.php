@@ -6,17 +6,17 @@
  */
 function post_find_all()
 {
-	$db = option('db-conn');
-	$sql = <<<'SQL'
-	SELECT 
-	* FROM posts 
+	$db = option('db_conn');
+	$sql = <<<SQL
+	SELECT * 
+	FROM posts 
 	ORDER BY modified_at DESC
 SQL;
 	$result = array();
 	$stmt = $db->prepare($sql);
 	if ($stmt->execute())
 	{
-		return $stmt->fetch(PDO::FETCH_ASSOC)
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 	return false;
 }
@@ -30,12 +30,13 @@ SQL;
 function post_find($id)
 {
 	$db = option('db_conn');
-	$sql = <<<'SQL'
-	SELECT .
-	* FROM posts where id=:id
+	$sql = <<<SQL
+	SELECT * 
+	FROM posts where id=:id
 SQL;
 	$stmt = $db->prepare($sql);
-	if ($stmt->execute() && $row = $stmt->fetch(PDO::FECTH_ASSOC))
+	$stmt->bindValue(':id', $id, PDO::PARAM_INT);
+	if ($stmt->execute() && $row = $stmt->fetch(PDO::FETCH_ASSOC))
 	{
 		return $row;
 	}
@@ -52,7 +53,7 @@ SQL;
 function post_create($data)
 {
 	$db = option('db_conn');
-	$sql = <<<'SQL'
+	$sql = <<<SQL
 	INSERT INTO `posts` ("title", "body", "created_at", "modified_at") 
 	VALUES (:title, :body, DATETIME('NOW'), DATETIME('NOW', 'localtime'))
 SQL;
@@ -77,9 +78,9 @@ SQL;
 function post_update($post_id, $data)
 {
 	$db = option('db_conn');
-	$sql = <<<'SQL'
-	UPDATE `posts` SET 
-	("title", "body", "modified_at") 
+	$sql = <<<SQL
+	UPDATE `posts`
+	SET ("title", "body", "modified_at") 
 	VALUES (:title, :body, DATETIME('NOW'))
 	WHERE id = :id
 SQL;
@@ -99,7 +100,7 @@ SQL;
 function post_destroy($post_id)
 {
 	$db = option('db_conn');
-	$sql = <<<'SQL'
+	$sql = <<<SQL
 	DELETE FROM `posts` 
 	WHERE id = :id
 SQL;

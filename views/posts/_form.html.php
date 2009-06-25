@@ -1,11 +1,14 @@
 
-<? $action = empty($post['id']) ? url_for('posts') : $url_for('posts', $post['id']); ?>
+<? 
+  $action = empty($post['id']) ? url_for('posts') : $url_for('posts', $post['id']);
+  $method = empty($post['id']) ? 'POST' : 'PUT'; 
+?>
 <form action="<?=$action?>" method="<?=$method?>">
   <fieldset id="post_form">
     <legend>Post</legend>
     <p>
       <label for="post_title">Title</label>
-      <input type="text" name="post[title]" value="<?=h($post['title'];)?>" id="post_title">
+      <input type="text" name="post[title]" value="<?=h($post['title']);?>" id="post_title">
     </p>
     <p>
       <label for="post_body">Body</label>

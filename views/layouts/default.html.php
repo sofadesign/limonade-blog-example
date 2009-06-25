@@ -10,6 +10,14 @@
 	<!-- Date: 2009-06-25 -->
 </head>
 <body>
-<?= $content; ?>
+  <h1>Limonade blog example</h1>
+  <div id="content">
+    <?= $content; ?>
+  </div>
+<hr>
+<p id="nav">
+  <a href="<?=url_for('posts')?>">List all posts</a> | 
+  <a href="<?=url_for('posts','new')?>">Create a new post</a> 
+</p>
 </body>
 </html>
