@@ -1,6 +1,6 @@
 <?php
 
-require_once('lib//limonade/lib/limonade.php');
+require_once('lib/limonade/lib/limonade.php');
 
 # Setting global options of our application
 function configure()
@@ -8,7 +8,7 @@ function configure()
   $localhost = preg_match('/^localhost(\:\d+)?/', $_SERVER['HTTP_HOST']);
   $env =  $localhost ? ENV_DEVELOPMENT : ENV_PRODUCTION;
 	$dsn = $env == ENV_PRODUCTION ? 'sqlite:db/prod.db' : 'sqlite:db/dev.db';
-	$db = new PDO($slcted_db);
+	$db = new PDO($dsn);
 	$db->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
   option('env', $env);
 	option('db_conn', $db);
@@ -19,7 +19,7 @@ function configure()
 # will be executed bfore each controller function
 function before()
 {
-  html_layout('layouts/default.html.php');
+  layout('layouts/default.html.php');
 }
 
 # Defining routes and controllers
@@ -48,7 +48,7 @@ dispatch('/posts', 'blog_posts_index');
   {
     $posts = post_find_all();
     set('posts', $posts);
-    html('posts/index.html.php');
+    return html('posts/index.html.php');
   }
   
 # matches GET /posts/1  
@@ -58,7 +58,7 @@ dispatch('/posts/:id', 'blog_posts_show');
     if( $post = post_find(params('id')) )
     {
       set('post', $post);
-      html('posts/show.html.php');
+      return html('posts/show.html.php');
     }
     else
     {
@@ -73,7 +73,7 @@ dispatch('/posts/new', 'blog_posts_new');
   { 
     # passing an empty post to the view
     set('post', array('id'=>'', 'title'=>'Your title here...', 'body'=>'Your content...'));
-    html('posts/new.html.php');
+    return html('posts/new.html.php');
   }
   
 # matches POST /posts
@@ -97,7 +97,7 @@ dispatch('/posts/:id/edit', 'blog_posts_edit');
     if($post = post_find(params('id')))
     {
       set('post', $post);
-      html('posts/edit.html.php');
+      return html('posts/edit.html.php');
     }
     else
     {
@@ -135,6 +135,7 @@ dispatch_delete('/posts/:id', 'blog_posts_destroy');
     }
   }
 
+run();
 
 ?>
 
