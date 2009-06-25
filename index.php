@@ -71,6 +71,8 @@ dispatch('/posts/:id', 'blog_posts_show')
 dispatch('/posts/new', 'blog_posts_new')
   function blog_posts_new()
   { 
+    # passing an empty post to the view
+    set('post', array('id'=>'', 'title'=>'Your title here...', 'body'=>'Your content...'));
     html('posts/new.html.php');
   }
   
@@ -94,6 +96,7 @@ dispatch('/posts/:id/edit', 'blog_posts_edit')
   {
     if($post = post_find(params('id')))
     {
+      set('post', $post);
       html('posts/edit.html.php');
     }
     else
