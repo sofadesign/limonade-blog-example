@@ -1,6 +1,6 @@
 <?php
 
-require_once('lib/limonade');
+require_once('lib//limonade/lib/limonade.php');
 
 # Setting global options of our application
 function configure()
@@ -52,7 +52,7 @@ dispatch('/posts', 'blog_posts_index');
   }
   
 # matches GET /posts/1  
-dispatch('/posts/:id', 'blog_posts_show')
+dispatch('/posts/:id', 'blog_posts_show');
   function blog_posts_show()
   { 
     if( $post = post_find(params('id')) )
@@ -68,14 +68,14 @@ dispatch('/posts/:id', 'blog_posts_show')
   }
   
 # matches GET /posts/new  
-dispatch('/posts/new', 'blog_posts_new')
+dispatch('/posts/new', 'blog_posts_new');
   function blog_posts_new()
   { 
     html('posts/new.html.php');
   }
   
 # matches POST /posts
-dispatch_post('/posts', 'blog_posts_create')
+dispatch_post('/posts', 'blog_posts_create');
   function blog_posts_create()
   { 
     if($post_id = post_create($_POST['post']))
@@ -84,12 +84,12 @@ dispatch_post('/posts', 'blog_posts_create')
     }
     else
     {
-      halt(SERVER_ERROR, "AN error occurd while trying to create a new post")
+      halt(SERVER_ERROR, "AN error occurd while trying to create a new post");
     }
   }
   
 # matches GET /posts/1/edit  
-dispatch('/posts/:id/edit', 'blog_posts_edit')
+dispatch('/posts/:id/edit', 'blog_posts_edit');
   function blog_posts_edit()
   {
     if($post = post_find(params('id')))
@@ -103,7 +103,7 @@ dispatch('/posts/:id/edit', 'blog_posts_edit')
   }
   
 # matches PUT /posts/1
-dispatch_put('/posts/:id', 'blog_posts_update')
+dispatch_put('/posts/:id', 'blog_posts_update');
   function blog_posts_update()
   {
     $post_id = params('id');
@@ -118,7 +118,7 @@ dispatch_put('/posts/:id', 'blog_posts_update')
   }
   
 # matches DELETE /posts/1
-dispatch_delete('/posts/:id', 'blog_posts_destroy')
+dispatch_delete('/posts/:id', 'blog_posts_destroy');
   function blog_posts_destroy()
   {
     $post_id = params('id');
