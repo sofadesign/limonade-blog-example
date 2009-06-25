@@ -16,12 +16,9 @@ SQL;
 	$stmt = $db->prepare($sql);
 	if ($stmt->execute())
 	{
-		while ($row = $stmt->fecth(PDO::FETCH_ASSOC))
-		{
-			$result[] = $row;
-		}
+		return $stmt->fetch(PDO::FETCH_ASSOC)
 	}
-	return $result;
+	return false;
 }
 
 /**
