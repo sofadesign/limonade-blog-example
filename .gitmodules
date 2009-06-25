@@ -1,0 +1,3 @@
+[submodule "lib/limonade"]
+	path = lib/limonade
+	url = git://github.com/sofadesign/limonade.git
