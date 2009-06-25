@@ -50,7 +50,17 @@ dispatch('/posts', 'blog_posts_index');
     set('posts', $posts);
     return html('posts/index.html.php');
   }
-  
+
+# matches GET /posts/new
+# must be written before the /posts/:id route
+dispatch('/posts/new', 'blog_posts_new');
+  function blog_posts_new()
+  { 
+    # passing an empty post to the view
+    set('post', array('id'=>'', 'title'=>'Your title here...', 'body'=>'Your content...'));
+    return html('posts/new.html.php');
+  }
+
 # matches GET /posts/1  
 dispatch('/posts/:id', 'blog_posts_show');
   function blog_posts_show()
@@ -65,15 +75,6 @@ dispatch('/posts/:id', 'blog_posts_show');
       halt(NOT_FOUND, "This post doesn't exists");
     }
     
-  }
-  
-# matches GET /posts/new  
-dispatch('/posts/new', 'blog_posts_new');
-  function blog_posts_new()
-  { 
-    # passing an empty post to the view
-    set('post', array('id'=>'', 'title'=>'Your title here...', 'body'=>'Your content...'));
-    return html('posts/new.html.php');
   }
   
 # matches POST /posts
