@@ -55,7 +55,7 @@ function post_create($data)
 	$db = option('db_conn');
 	$sql = <<<SQL
 	INSERT INTO `posts` ("title", "body", "created_at", "modified_at") 
-	VALUES (:title, :body, DATETIME('NOW'), DATETIME('NOW', 'localtime'))
+	VALUES (:title, :body, DATETIME('NOW', 'localtime'), DATETIME('NOW', 'localtime'))
 SQL;
 	$stmt = $db->prepare($sql);
 	$stmt->bindValue(':title', $data['title'], PDO::PARAM_STR);
