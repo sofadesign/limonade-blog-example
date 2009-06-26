@@ -80,8 +80,7 @@ function post_update($post_id, $data)
 	$db = option('db_conn');
 	$sql = <<<SQL
 	UPDATE `posts`
-	SET ("title", "body", "modified_at") 
-	VALUES (:title, :body, DATETIME('NOW'))
+	SET title = :title, body = :body, modified_at = DATETIME('NOW', 'localtime')
 	WHERE id = :id
 SQL;
 	$stmt = $db->prepare($sql);
