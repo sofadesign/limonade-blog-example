@@ -8,13 +8,19 @@ the [Limonade PHP](http://www.sofa-design.net/limonade) micro-framework
                                                                          
 This code is for learning purpose and is not intended to be used "as is" 
 in a production environement.                                            
+
+## Requirements ##
+
+* SQLite 3
+* PHP 5.2.x > with PDO and PDO_sqlite extensions
                                                                          
 ## Getting Started ##                                                            
 
 * [Download](http://github.com/sofadesign/limonade-blog-example/zipball/master) and extract the code
 * place it in a folder under the docroot your favorite webserver
 * make the `db` directory writable (`chmod 775 db/`...)
-* call it in your browser
+* call the `setup.php` in your browser
+
                                                                          
 ## License ##                                                            
                                                                          
