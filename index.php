@@ -1,6 +1,6 @@
 <?php
 
-require_once('lib/limonade/lib/limonade.php');
+require_once('lib/limonade.php');
 
 # Setting global options of our application
 function configure()
@@ -8,7 +8,14 @@ function configure()
   $localhost = preg_match('/^localhost(\:\d+)?/', $_SERVER['HTTP_HOST']);
   $env =  $localhost ? ENV_DEVELOPMENT : ENV_PRODUCTION;
 	$dsn = $env == ENV_PRODUCTION ? 'sqlite:db/prod.db' : 'sqlite:db/dev.db';
-	$db = new PDO($dsn);
+	try
+	{
+	  $db = new PDO($dsn);
+	}
+	catch(PDOException $e)
+	{
+	  halt("Connexion failed: ".$e);
+	}
 	$db->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
   option('env', $env);
 	option('db_conn', $db);
