@@ -55,16 +55,23 @@
 /**
  * Limonade version
  */
-define('LIMONADE',             '0.3');
-define('LIM_START_MICROTIME',  (float)substr(microtime(), 0, 10));
-define('E_LIM_HTTP',           32768);
-define('E_LIM_PHP',            65536);
-define('NOT_FOUND',            404);
-define('SERVER_ERROR',         500);
-define('ENV_PRODUCTION',       10);
-define('ENV_DEVELOPMENT',      100);
-define('X-SENDFILE',           10);
-define('X-LIGHTTPD-SEND-FILE', 20);
+define('LIMONADE',              '0.4.5');
+define('LIM_START_MICROTIME',   (float)substr(microtime(), 0, 10));
+define('LIM_SESSION_NAME',      'Fresh_and_Minty_Limonade_App');
+define('LIM_SESSION_FLASH_KEY', '_lim_flash_messages');
+define('E_LIM_HTTP',            32768);
+define('E_LIM_PHP',             65536);
+define('E_LIM_DEPRECATED',      35000);
+define('NOT_FOUND',             404);
+define('SERVER_ERROR',          500);
+define('ENV_PRODUCTION',        10);
+define('ENV_DEVELOPMENT',       100);
+define('X-SENDFILE',            10);
+define('X-LIGHTTPD-SEND-FILE',  20);
+
+# for PHP 5.3.0 <
+if(!defined('E_DEPRECATED'))      define('E_DEPRECATED', 8192);
+if(!defined('E_USER_DEPRECATED')) define('E_USER_DEPRECATED', 16384);
 
 
 ## SETTING BASIC SECURITY _____________________________________________________
@@ -119,6 +126,34 @@ if(get_magic_quotes_runtime()) set_magic_quotes_runtime(false);
 #    if you want to show errors before running app
 ini_set('display_errors', 0);
 
+## SETTING INTERNAL ROUTES _____________________________________________________
+
+dispatch(array("/_lim_css/*.css", array('_lim_css_filename')), 'render_limonade_css');
+  /**
+   * Internal controller that responds to route /_lim_css/*.css
+   *
+   * @access private
+   * @return string
+   */
+  function render_limonade_css()
+  {
+    option('views_dir', file_path(option('limonade_public_dir'), 'css'));
+    $fpath = file_path(params('_lim_css_filename').".css");
+    return css($fpath, null); // with no layout
+  }
+
+dispatch(array("/_lim_public/**", array('_lim_public_file')), 'render_limonade_file');
+  /**
+   * Internal controller that responds to route /_lim_public/**
+   *
+   * @access private
+   * @return void
+   */
+  function render_limonade_file()
+  {
+    $fpath = file_path(option('limonade_public_dir'), params('_lim_public_file'));
+    return render_file($fpath, true);
+  }
 
 
 
@@ -140,6 +175,7 @@ ini_set('display_errors', 0);
 # function not_found(){}
 # function server_error(){}
 # function route_missing(){}
+# function before_exit(){}
 
 
 ## MAIN PUBLIC FUNCTIONS _______________________________________________________
@@ -148,7 +184,7 @@ ini_set('display_errors', 0);
  * Set and returns options values
  * 
  * If multiple values are provided, set $name option with an array of those values.
- * If only ther is only one value, set $name option with the provided $values
+ * If there is only one value, set $name option with the provided $values
  *
  * @param string $name 
  * @param mixed  $values,... 
@@ -226,7 +262,7 @@ function params($name_or_array_or_null = null, $value = null)
  * Set and returns template variables
  * 
  * If multiple values are provided, set $name variable with an array of those values.
- * If only ther is only one value, set $name variable with the provided $values
+ * If there is only one value, set $name variable with the provided $values
  *
  * @param string $name 
  * @param mixed  $values,... 
@@ -271,27 +307,47 @@ function run($env = null)
    
   # 0. Set default configuration
   $root_dir = dirname(app_file());
-  option('root_dir',        $root_dir);
-  option('limonade_dir',    dirname(__FILE__).'/');
-  option('public_dir',      $root_dir.'/public/');
-  option('views_dir',       $root_dir.'/views/');
-  option('controllers_dir', $root_dir.'/controllers/');
-  option('lib_dir',         $root_dir.'/lib/');
-  option('env',             ENV_PRODUCTION);
-  option('debug',           true);
-  option('encoding',        'utf-8');
-  option('x-sendfile',      0); // 0: disabled, 
-                                // X-SENDFILE: for Apache and Lighttpd v. >= 1.5,
-                                // X-LIGHTTPD-SEND-FILE: for Apache and Lighttpd v. < 1.5
+  $base_path = dirname($env['SERVER']['SCRIPT_NAME']);
+  $base_file = basename($env['SERVER']['SCRIPT_NAME']);
+  $base_uri  = $base_path . '/'
+             . ($base_file == 'index.php') ? '?' : $base_file.'?';
+  option('root_dir',           $root_dir);
+  option('base_path',          $base_path);
+  option('base_uri',           $base_uri); // set it manually if you use url_rewriting
+  option('limonade_dir',       dirname(__FILE__).'/');
+  option('limonade_views_dir', dirname(__FILE__).'/limonade/views/');
+  option('limonade_public_dir',dirname(__FILE__).'/limonade/public/');
+  option('public_dir',         $root_dir.'/public/');
+  option('views_dir',          $root_dir.'/views/');
+  option('controllers_dir',    $root_dir.'/controllers/');
+  option('lib_dir',            $root_dir.'/lib/');
+  option('error_views_dir',    option('limonade_views_dir'));
+  option('env',                ENV_PRODUCTION);
+  option('debug',              true);
+  option('session',            LIM_SESSION_NAME); // true, false or the name of your session
+  option('encoding',           'utf-8');
+  option('x-sendfile',         0); // 0: disabled, 
+                                   // X-SENDFILE: for Apache and Lighttpd v. >= 1.5,
+                                   // X-LIGHTTPD-SEND-FILE: for Apache and Lighttpd v. < 1.5
   
   # 1. Set error handling
   ini_set('display_errors', 1);
   set_error_handler('error_handler_dispatcher', E_ALL ^ E_NOTICE);
   
-  # 2. Loading libs
+  # 2. Set user configuration
+  call_if_exists('configure');
+  
+  # 3. Loading libs
   require_once_dir(option('lib_dir'));
   
-  # 3. Set some default methods if needed
+  # 4. Starting session
+  if(!defined('SID') && option('session'))
+  {
+    if(!is_bool(option('session'))) session_name(option('session'));
+    if(!session_start()) trigger_error("An error occured while trying to start the session", E_USER_WARNING);
+  }
+  
+  # 5. Set some default methods if needed
   if(!function_exists('after'))
   {
     function after($output)
@@ -307,48 +363,69 @@ function run($env = null)
     }
   }
   
-  # 4. Set user configuration
-  call_if_exists('configure');
-  
-  # 5. Check request
+  # 6. Check request
   if($rm = request_method())
   {
-    # 5.1 Check matching route
+    if(request_is_head()) ob_start(); // then no output
+    
+    if(!request_method_is_allowed($rm))
+      halt(HTTP_NOT_IMPLEMENTED, "The requested method <code>'$rm'</code> is not implemented");
+    
+    # 6.1 Check matching route
     if($route = route_find($rm, request_uri()))
     {
       params($route['params']);
       
-      # 5.2 Load controllers dir
+      # 6.2 Load controllers dir
       require_once_dir(option('controllers_dir'));
       
       if(function_exists($route['function']))
       {
-        # 5.3 Call before function
+        # 6.3 Call before function
         call_if_exists('before');
         
-        # 5.4 Call matching controller function and output result
+        # 6.4 Call matching controller function and output result
         if($output = call_user_func($route['function']))
         {
-          if(option('debug') && option('env') > ENV_PRODUCTION)
-          {
-            $notices = error_notice();
-            if(!empty($notices))
-            {
-              foreach($notices as $notice) echo $notice;
-              echo '<hr>';
-            }
-          }
-          echo after($output);
+          echo after(error_notices_render() . $output);
         }
-        exit;
+        stop_and_exit();
       }
       else halt(SERVER_ERROR, "Routing error: undefined function '{$route['function']}'", $route);      
     }
     else route_missing($rm, request_uri());
     
   }
-  else halt(SERVER_ERROR, "Unknown request method <code>$rm</code>");
+  else halt(HTTP_NOT_IMPLEMENTED, "The requested method <code>'$rm'</code> is not implemented");
   
+}
+
+/**
+ * Stop and exit limonade application
+ *
+ * @access private 
+ * @param boolean exit or not
+ * @return void
+ */
+function stop_and_exit($exit = true)
+{
+  call_if_exists('before_exit');
+  $flash_sweep = true;
+  $headers = headers_list();
+  foreach($headers as $header)
+  {
+    // If a Content-Type header exists, flash_sweep only if is text/html
+    // Else if there's no Content-Type header, flash_sweep by default
+    if(stripos($header, 'Content-Type:') === 0)
+    {
+      $flash_sweep = stripos($header, 'Content-Type: text/html') === 0;
+      break;
+    }
+  }
+  if($flash_sweep) flash_sweep();
+  if(defined('SID')) session_write_close();
+  if(request_is_head()) ob_end_clean();
+  if($exit) exit;
 }
 
 /**
@@ -373,16 +450,28 @@ function env($reset = null)
   
   if(empty($env))
   {
+    if(empty($GLOBALS['_SERVER']))
+    {
+      // Fixing empty $GLOBALS['_SERVER'] bug 
+      // http://sofadesign.lighthouseapp.com/projects/29612-limonade/tickets/29-env-is-empty
+      $GLOBALS['_SERVER']  =& $_SERVER;
+      $GLOBALS['_FILES']   =& $_FILES;
+      $GLOBALS['_REQUEST'] =& $_REQUEST;
+      $GLOBALS['_SESSION'] =& $_SESSION;
+      $GLOBALS['_ENV']     =& $_ENV;
+      $GLOBALS['_COOKIE']  =& $_COOKIE;
+    }
+    
     $glo_names = array('SERVER', 'FILES', 'REQUEST', 'SESSION', 'ENV', 'COOKIE');
-      
+    
     $vars = array_merge($glo_names, request_methods());
     foreach($vars as $var)
     {
       $varname = "_$var";
-      if(!array_key_exists("$varname", $GLOBALS)) $GLOBALS[$varname] = array();
+      if(!array_key_exists($varname, $GLOBALS)) $GLOBALS[$varname] = array();
       $env[$var] =& $GLOBALS[$varname];
     }
-    
+
     $method = request_method($env);
     if($method == 'PUT' || $method == 'DELETE')
     {
@@ -510,22 +599,32 @@ function error_handler_dispatcher($errno, $errstr, $errfile, $errline)
     }
   }  
   
-  $handlers = error();
-  $is_http_err = http_response_status_is_valid($errno);
-  foreach($handlers as $handler)
+  # Notices and warning won't halt execution
+  if(error_wont_halt_app($errno))
   {
-    $e = is_array($handler['errno']) ? $handler['errno'] : array($handler['errno']);
-    while($ee = array_shift($e))
+    error_notice($errno, $errstr, $errfile, $errline);
+  	return;
+  }
+  else
+  {
+    # Other errors will stop application
+    $handlers = error();
+    $is_http_err = http_response_status_is_valid($errno);
+    foreach($handlers as $handler)
     {
-      if($ee == $errno || $ee == E_LIM_PHP || ($ee == E_LIM_HTTP && $is_http_err))
+      $e = is_array($handler['errno']) ? $handler['errno'] : array($handler['errno']);
+      while($ee = array_shift($e))
       {
-        echo call_if_exists($handler['function'], $errno, $errstr, $errfile, $errline);
-        exit;
+        if($ee == $errno || $ee == E_LIM_PHP || ($ee == E_LIM_HTTP && $is_http_err))
+        {
+          echo call_if_exists($handler['function'], $errno, $errstr, $errfile, $errline);
+          exit;
+        }
       }
     }
+    echo error_default_handler($errno, $errstr, $errfile, $errline);
+    stop_and_exit();
   }
-  echo error_default_handler($errno, $errstr, $errfile, $errline);
-  exit;
 }
 
 
@@ -544,15 +643,6 @@ function error_default_handler($errno, $errstr, $errfile, $errline)
   $http_error_code = $is_http_err ? $errno : SERVER_ERROR;
     
   status($http_error_code);
-  
-  if(($errno == E_USER_NOTICE || $errno == E_NOTICE) && option('debug'))
-  {
-    $o  = "<p>[".error_type($errno)."] ";
-	  $o .= "$errstr in <strong>$errfile</strong> line <strong>$errline</strong>: ";
-	  $o .= "</p>";
-	  error_notice($o);
-	  return;
-  }
 
   return $http_error_code == NOT_FOUND ?
             error_not_found_output($errno, $errstr, $errfile, $errline) :
@@ -581,9 +671,9 @@ function error_not_found_output($errno, $errstr, $errfile, $errline)
      */
     function not_found($errno, $errstr, $errfile=null, $errline=null)
     {
-      option('views_dir', option('limonade_dir').'limonade/views/');
+      option('views_dir', option('error_views_dir'));
       $msg = h(rawurldecode($errstr));
-      return html("<h1>Page not found:</h1><p>{$msg}</p>", error_layout());
+      return html("<h1>Page not found:</h1><p><code>{$msg}</code></p>", error_layout());
     }
   }
   return not_found($errno, $errstr, $errfile, $errline);
@@ -615,9 +705,11 @@ function error_server_error_output($errno, $errstr, $errfile, $errline)
     function server_error($errno, $errstr, $errfile=null, $errline=null)
     {
       $is_http_error = http_response_status_is_valid($errno);
-      $args = compact('errno', 'errstr', 'errfile', 'errline', 'is_http_error');	
-    	option('views_dir', option('limonade_dir').'limonade/views/');
-    	return html('error.html.php', error_layout(), $args);
+      $args = compact('errno', 'errstr', 'errfile', 'errline', 'is_http_error');
+      option('views_dir', option('limonade_views_dir'));
+      $html = render('error.html.php', null, $args);	
+    	option('views_dir', option('error_views_dir'));
+    	return html($html, error_layout(), $args);
     }
   }
   return server_error($errno, $errstr, $errfile, $errline);
@@ -632,25 +724,71 @@ function error_server_error_output($errno, $errstr, $errfile, $errline)
 function error_layout($layout = false)
 {
   static $o_layout = 'default_layout.php';
-  if($layout !== false) $o_layout = $layout;
+  if($layout !== false)
+  {
+    option('error_views_dir', option('views_dir'));
+    $o_layout = $layout;
+  }
   return $o_layout;
 }
 
 
 /**
- * Set a notice if provided and return all stored notices
+ * Set a notice if arguments are provided
+ * Returns all stored notices.
+ * If $errno argument is null, reset the notices array
  *
- * @param string $str 
+ * @access private
+ * @param string, null $str 
  * @return array
  */
-function error_notice($str = null)
+function error_notice($errno = false, $errstr = null, $errfile = null, $errline = null)
 {
   static $notices = array();
-  if(!is_null($str))
-  {
-    $notices[] = $str;
-  }
+  if($errno) $notices[] = compact('errno', 'errstr', 'errfile', 'errline');
+  else if(is_null($errno)) $notices = array();
   return $notices;
+}
+
+/**
+ * Returns notices output rendering and reset notices
+ *
+ * @return string
+ */
+function error_notices_render()
+{
+  if(option('debug') && option('env') > ENV_PRODUCTION)
+  {
+    $notices = error_notice();
+    error_notice(null); // reset notices
+    $c_view_dir = option('views_dir'); // keep for restore after render
+    option('views_dir', option('limonade_views_dir'));
+    $o = render('_notices.html.php', null, array('notices' => $notices));
+    option('views_dir', $c_view_dir); // restore current views dir
+    
+    return $o;
+  }
+}
+
+/**
+ * Checks if an error is will halt application execution. 
+ * Notices and warnings will not.
+ *
+ * @access private
+ * @param string $num error code number
+ * @return boolean
+ */
+function error_wont_halt_app($num)
+{
+  return $num == E_NOTICE ||
+         $num == E_WARNING ||
+         $num == E_CORE_WARNING ||
+         $num == E_COMPILE_WARNING ||
+         $num == E_USER_WARNING ||
+         $num == E_USER_NOTICE ||
+         $num == E_DEPRECATED ||
+         $num == E_USER_DEPRECATED ||
+         $num == E_LIM_DEPRECATED;
 }
 
 
@@ -676,7 +814,10 @@ function error_type($num = null)
               E_USER_WARNING       => 'USER WARNING',
               E_USER_NOTICE        => 'USER NOTICE',
               E_STRICT             => 'STRICT NOTICE',
-              E_RECOVERABLE_ERROR  => 'RECOVERABLE ERROR'
+              E_RECOVERABLE_ERROR  => 'RECOVERABLE ERROR',
+              E_DEPRECATED         => 'DEPRECATED WARNING',
+              E_USER_DEPRECATED    => 'USER DEPRECATED WARNING',
+              E_LIM_DEPRECATED     => 'LIMONADE DEPRECATED WARNING'
               );
   return is_null($num) ? $types : $types[$num];
 }
@@ -782,13 +923,24 @@ function request_is_delete($env = null)
 }
 
 /**
+ * Checks if request method is HEAD
+ *
+ * @param string $env 
+ * @return bool
+ */
+function request_is_head($env = null)
+{
+  return request_method($env) == "HEAD";
+}
+
+/**
  * Returns allowed request methods
  *
  * @return array
  */
 function request_methods()
 {
-   return array("GET","POST","PUT","DELETE");
+   return array("GET","POST","PUT","DELETE", "HEAD");
 }
 
 /**
@@ -880,22 +1032,22 @@ function request_uri($env = null)
  *
  * @return void
  */
-function dispatch($path_or_array, $function, $agent_regexp = null)
+function dispatch($path_or_array, $function)
 {
-  dispatch_get($path_or_array, $function, $agent_regexp);
+  dispatch_get($path_or_array, $function);
 }
 
 /**
- * Add a GET route
+ * Add a GET route. Also automatically defines a HEAD route.
  *
  * @param string $path_or_array 
  * @param string $function 
- * @param string $agent_regexp 
  * @return void
  */
-function dispatch_get($path_or_array, $function, $agent_regexp = null)
+function dispatch_get($path_or_array, $function)
 {
-  route("GET", $path_or_array, $function, $agent_regexp);
+  route("GET", $path_or_array, $function);
+  route("HEAD", $path_or_array, $function);
 }
 
 /**
@@ -903,12 +1055,11 @@ function dispatch_get($path_or_array, $function, $agent_regexp = null)
  *
  * @param string $path_or_array 
  * @param string $function 
- * @param string $agent_regexp 
  * @return void
  */
-function dispatch_post($path_or_array, $function, $agent_regexp = null)
+function dispatch_post($path_or_array, $function)
 {
-   route("POST", $path_or_array, $function, $agent_regexp);
+   route("POST", $path_or_array, $function);
 }
 
 /**
@@ -916,12 +1067,11 @@ function dispatch_post($path_or_array, $function, $agent_regexp = null)
  *
  * @param string $path_or_array 
  * @param string $function 
- * @param string $agent_regexp 
  * @return void
  */
-function dispatch_put($path_or_array, $function, $agent_regexp = null)
+function dispatch_put($path_or_array, $function)
 {
-   route("PUT", $path_or_array, $function, $agent_regexp);
+   route("PUT", $path_or_array, $function);
 }
 
 /**
@@ -929,12 +1079,11 @@ function dispatch_put($path_or_array, $function, $agent_regexp = null)
  *
  * @param string $path_or_array 
  * @param string $function 
- * @param string $agent_regexp 
  * @return void
  */
-function dispatch_delete($path_or_array, $function, $agent_regexp = null)
+function dispatch_delete($path_or_array, $function)
 {
-   route("DELETE", $path_or_array, $function, $agent_regexp);
+   route("DELETE", $path_or_array, $function);
 }
 
 
@@ -946,8 +1095,7 @@ function dispatch_delete($path_or_array, $function, $agent_regexp = null)
  * @access private
  * @param string $method 
  * @param string $path_or_array 
- * @param string $func 
- * @param string $agent_regexp 
+ * @param string $func
  * @return array
  */
 function route()
@@ -964,9 +1112,8 @@ function route()
 	    $method        = $args[0];
   	  $path_or_array = $args[1];
   	  $func          = $args[2];
-  	  $agent_regexp  = array_key_exists(3, $args) ? $args[3] : null;
 
-  	  $routes[] = route_build($method, $path_or_array, $func, $agent_regexp);
+  	  $routes[] = route_build($method, $path_or_array, $func);
 	  }
 	  
 	}
@@ -990,15 +1137,15 @@ function route_reset()
  * @access private
  * @param string $method 
  * @param string $path_or_array 
- * @param string $func 
- * @param string $agent_regexp 
+ * @param string $func
  * @return array
  */
-function route_build($method, $path_or_array, $func, $agent_regexp = null)
+function route_build($method, $path_or_array, $func)
 {
    $method = strtoupper($method);
    if(!in_array($method, request_methods())) 
-      trigger_error("'$method' request method is unkown or unavailable.", E_USER_ERROR);
+      trigger_error("'$method' request method is unkown or unavailable.", E_USER_WARNING);
+      
    
    if(is_array($path_or_array))
    {
@@ -1085,8 +1232,7 @@ function route_build($method, $path_or_array, $func, $agent_regexp = null)
    return array( "method"       => $method,
                  "pattern"      => $pattern,
                  "names"        => $names,
-                 "function"     => $func,
-                 "agent_regexp" => $agent_regexp );
+                 "function"     => $func     );
 }
 
 /**
@@ -1160,6 +1306,11 @@ function render($content_or_func, $layout = '', $locals = array())
 	$layout = count($args) > 0 ? array_shift($args) : layout();
 	$view_path = file_path(option('views_dir'),$content_or_func);
 	$vars = array_merge(set(), $locals);
+	
+	$flash = flash_now();
+	if(array_key_exists('flash', $vars)) trigger_error('A $flash variable is already passed to view. Flash messages will only be accessible through flash_now()', E_USER_NOTICE);  
+	else if(!empty($flash)) $vars['flash'] = $flash;
+
   $infinite_loop = false;
   
   # Avoid infinite loop: this function is in the backtrace ?
@@ -1191,7 +1342,8 @@ function render($content_or_func, $layout = '', $locals = array())
 	}
 	else
 	{
-	  $content = vsprintf($content_or_func, $vars);
+	  if(substr_count($content_or_func, '%') !== count($vars)) $content = $content_or_func;
+    else $content = vsprintf($content_or_func, $vars);
 	}
 
 	if(empty($layout)) return $content;
@@ -1309,7 +1461,7 @@ function render_file($filename, $return = false)
   {
     $content_type = mime_type(file_extension($filename));
     $header = 'Content-type: '.$content_type;
-    if(file_is_text($filename)) $header .= 'charset='.strtolower(option('encoding'));
+    if(file_is_text($filename)) $header .= '; charset='.strtolower(option('encoding'));
     if(!headers_sent()) header($header);
     return file_read($filename, $return);
   }
@@ -1333,29 +1485,43 @@ function render_file($filename, $return = false)
 /**
  * Returns an url composed of params joined with /
  *
- * @param string $params 
+ * @param string $params,... 
  * @return string
  */ 
 function url_for($params = null)
 {
-  $env = env();
-  $request_uri = rtrim($env['SERVER']['REQUEST_URI'], '?');
-  $base_path   = $env['SERVER']['SCRIPT_NAME'];
-
-  $base_path = ereg_replace('index\.php$', '?', $base_path);
-
-  $paths = array();
+  $paths  = array();
   $params = func_get_args();
+  $first  = true;
   foreach($params as $param)
   {
+    if($first)
+    {
+      if(filter_var($param , FILTER_VALIDATE_URL))
+      {
+        $paths[] = $param;
+        continue;
+      }
+    }
     $p = explode('/',$param);
     foreach($p as $v)
     {
-      if(!empty($v)) $paths[] = rawurlencode($v);
+      if(!empty($v)) $paths[] = str_replace('%23', '#', rawurlencode($v));
     }
   }
   
-  return rtrim($base_path."/".implode('/', $paths), '/');
+  $path = rtrim(implode('/', $paths), '/');
+  
+  if(!filter_var($path , FILTER_VALIDATE_URL)) 
+  {
+    # it's a relative URL or an URL without a schema
+    $base_uri = option('base_uri');
+    $path = file_path($base_uri, $path);
+  }
+  
+  if(DIRECTORY_SEPARATOR != '/') $path = str_replace(DIRECTORY_SEPARATOR, '/', $path);
+
+  return $path;
 }
 
 /**
@@ -1371,6 +1537,86 @@ function h($str, $quote_style = ENT_NOQUOTES, $charset = null)
 {
 	if(is_null($charset)) $charset = strtoupper(option('encoding'));
 	return htmlspecialchars($str, $quote_style, $charset); 
+}
+
+/**
+ * Set and returns flash messages that will be available in the next action
+ * via the {@link flash_now()} function or the view variable <code>$flash</code>.
+ * 
+ * If multiple values are provided, set <code>$name</code> variable with an array of those values.
+ * If there is only one value, set <code>$name</code> variable with the provided $values
+ * or if it's <code>$name</code> is an array, merge it with current messages.
+ *
+ * @param string, array $name 
+ * @param mixed  $values,... 
+ * @return mixed variable value for $name if $name argument is provided, else return all variables
+ */
+function flash($name = null, $value = null)
+{
+  if(!defined('SID')) trigger_error("Flash messages can't be used because session isn't enabled", E_USER_WARNING);
+  static $messages = array();
+  $args = func_get_args();
+  $name = array_shift($args);
+  if(is_null($name)) return $messages;
+  if(is_array($name)) return $messages = array_merge($messages, $name);
+  if(!empty($args))
+  {
+    $messages[$name] = count($args) > 1 ? $args : $args[0];
+  }
+  if(array_key_exists($name, $messages)) return $messages[$name];
+  return $messages;
+}
+
+/**
+ * Set and returns flash messages available for the current action, included those
+ * defined in the previous action with {@link flash()}
+ * Those messages will also be passed to the views and made available in the 
+ * <code>$flash</code> variable.
+ * 
+ * If multiple values are provided, set <code>$name</code> variable with an array of those values.
+ * If there is only one value, set <code>$name</code> variable with the provided $values
+ * or if it's <code>$name</code> is an array, merge it with current messages.
+ *
+ * @param string, array $name 
+ * @param mixed  $values,... 
+ * @return mixed variable value for $name if $name argument is provided, else return all variables
+ */
+function flash_now($name = null, $value = null)
+{
+  static $messages = null;
+  if(is_null($messages))
+  {
+    $fkey = LIM_SESSION_FLASH_KEY;
+    $messages = array();
+    if(defined('SID') && array_key_exists($fkey, $_SESSION)) $messages = $_SESSION[$fkey];
+  }
+  $args = func_get_args();
+  $name = array_shift($args);
+  if(is_null($name)) return $messages;
+  if(is_array($name)) return $messages = array_merge($messages, $name);
+  if(!empty($args))
+  {
+    $messages[$name] = count($args) > 1 ? $args : $args[0];
+  }
+  if(array_key_exists($name, $messages)) return $messages[$name];
+  return $messages;
+}
+
+/**
+ * Delete current flash messages in session, and set new ones stored with 
+ * flash function.
+ * Called before application exit.
+ *
+ * @access private
+ * @return void
+ */
+function flash_sweep()
+{
+  if(defined('SID'))
+  {
+    $fkey = LIM_SESSION_FLASH_KEY;
+    $_SESSION[$fkey] = flash();
+  }
 }
 
 
@@ -1434,7 +1680,7 @@ function value_or_default($value, $default)
  */
 function v($value, $default)
 {
-  return empty($value) ? $default : $value;
+  return value_or_default($value, $default);
 }
 
 /**
@@ -1448,58 +1694,11 @@ function require_once_dir($path, $pattern = "*.php")
 {
   if($path[strlen($path) - 1] != "/") $path .= "/";
   $filenames = glob($path.$pattern);
+  if(!is_array($filenames)) $filenames = array();
   foreach($filenames as $filename) require_once $filename;
   return $filenames;
 }
 
-/**
- * Converting an array to an XML document
- * Pass in a multi dimensional array and this recrusively loops through and builds up an XML document.
- *
- * (inspired from http://snipplr.com/view/3491/convert-php-array-to-xml-or-simple-xml-object-if-you-wish/)
- * 
- * @param array $data
- * @param string $rootNodeName - what you want the root node to be - defaultsto data.
- * @param SimpleXMLElement $xml - should only be used recursively
- * @return string XML
- */
-function array_to_xml($data, $rootNodeName = 'data', &$xml=null)
-{
-	// turn off compatibility mode as simple xml throws a wobbly if you don't.
-	if (ini_get('zend.ze1_compatibility_mode') == 1) ini_set ('zend.ze1_compatibility_mode', 0);
-
-	if (is_null($xml))
-	{
-		$xml_str = "<?xml version='1.0' encoding='".
-		            option(encoding)."'?><$rootNodeName />";
-		$xml = simplexml_load_string($xml_str);
-	}
-
-	// loop through the data passed in.
-	foreach($data as $key => $value)
-	{
-		// no numeric keys in our xml please!
-		if (is_numeric($key)) $key = "node_". (string) $key;
-
-		// replace anything not alpha numeric
-		$key = preg_replace('/[^\w\d-_]/i', '_', $key);
-
-		// if there is another array found recrusively call this function
-		if (is_array($value))
-		{
-			$node = $xml->addChild($key);
-			array_to_xml($value, $rootNodeName, $node);
-		}
-		else 
-		{
-			// add single node.
-      $value = h($value);
-			$xml->addChild($key, $value);
-		}
-
-	}
-	return $xml->asXML();
-}
 
 ## HTTP utils  _________________________________________________________________
 
@@ -1577,10 +1776,10 @@ function status($code = 500)
 /**
  * Http redirection
  *
- * @param string $url 
+ * @param string $params,... 
  * @return void
  */
-function redirect($uri)
+function redirect_to($params)
 {
   # [NOTE]: (from php.net) HTTP/1.1 requires an absolute URI as argument to » Location:
   # including the scheme, hostname and absolute path, but some clients accept
@@ -1591,9 +1790,26 @@ function redirect($uri)
   # TODO make absolute uri
   if(!headers_sent())
 	{
+    $params = func_get_args();
+    $uri = call_user_func_array('url_for', $params);
+    stop_and_exit(false);
     header('Location: '.$uri);
     exit;
   }
+}
+
+/**
+ * Http redirection
+ *
+ * @deprecated deprecated since version 0.4. Please use {@link redirect_to()} instead.
+ * @param string $url 
+ * @return void
+ */
+function redirect($uri)
+{
+  # halt('redirect() is deprecated. Please use redirect_to() instead.', E_LIM_DEPRECATED);
+  # halt not necesary... it won't be visible because of http redirection...
+  redirect_to($uri);
 }
 
 /**
@@ -1721,6 +1937,7 @@ function mime_type($ext = null)
     'cpt'     => 'application/mac-compactpro',
     'csh'     => 'application/x-csh',
     'css'     => 'text/css',
+    'csv'     => 'text/csv',
     'dcr'     => 'application/x-director',
     'dir'     => 'application/x-director',
     'djv'     => 'image/vnd.djvu',
@@ -1862,25 +2079,23 @@ function mime_type($ext = null)
   return is_null($ext) ? $types : $types[strtolower($ext)];
 }
 
-if(!function_exists('mime_content_type')) {
-  /**
-   * Detect MIME Content-type for a file
-   *
-   * @param string $filename Path to the tested file.
-   * @return string
-   */
-  function mime_content_type($filename)
-  {
-    $ext = strtolower(array_pop(explode('.', $filename)));
-    if($mime = mime_type($ext)) return $mime;
-    elseif (function_exists('finfo_open')) {
-        $finfo = finfo_open(FILEINFO_MIME);
-        $mime = finfo_file($finfo, $filename);
-        finfo_close($finfo);
-        return $mime;
-    }
-    else return 'application/octet-stream';
+/**
+ * Detect MIME Content-type for a file
+ *
+ * @param string $filename Path to the tested file.
+ * @return string
+ */
+function file_mime_content_type($filename)
+{
+  $ext = file_extension($filename); /* strtolower isn't necessary */
+  if($mime = mime_type($ext)) return $mime;
+  elseif (function_exists('finfo_open')) {
+      $finfo = finfo_open(FILEINFO_MIME);
+      $mime = finfo_file($finfo, $filename);
+      finfo_close($finfo);
+      return $mime;
   }
+  else return 'application/octet-stream';
 }
 
 
@@ -1956,7 +2171,7 @@ function file_extension($filename)
  */
 function file_is_text($filename)
 {
-	if($mime = mime_content_type($filename)) return substr($mime,0,5) == "text/";
+	if($mime = file_mime_content_type($filename)) return substr($mime,0,5) == "text/";
 	return null;
 }
 
@@ -2014,5 +2229,3 @@ function file_list_dir($dir)
 
 
 #   ================================= END ==================================   #
-
-?>

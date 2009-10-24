@@ -97,7 +97,7 @@ function before()
 dispatch('/', 'blog_posts_home');
   function blog_posts_home()
   {
-    redirect(url_for('posts')); # redirects to the index
+    redirect_to('posts'); # redirects to the index
   }
 
 # matches GET /posts  
@@ -141,7 +141,7 @@ dispatch_post('/posts', 'blog_posts_create');
   { 
     if($post_id = post_create($_POST['post']))
     {
-      redirect(url_for('posts', $post_id)); # redirects to the show page of this newly created post
+      redirect_to('posts', $post_id); # redirects to the show page of this newly created post
     }
     else
     {
@@ -171,7 +171,7 @@ dispatch_put('/posts/:id', 'blog_posts_update');
     $post_id = params('id');
     if(post_update($post_id, $_POST['post']))
     {
-      redirect(url_for('posts', $post_id)); # redirects to this freshly just updated post
+      redirect_to('posts', $post_id); # redirects to this freshly just updated post
     }
     else
     {
@@ -186,7 +186,7 @@ dispatch_delete('/posts/:id', 'blog_posts_destroy');
     $post_id = params('id');
     if($post = post_destroy($post_id))
     {
-      redirect(url_for('posts')); # redirects to the index
+      redirect_to('posts'); # redirects to the index
     }
     else
     {
