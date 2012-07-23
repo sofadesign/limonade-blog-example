@@ -1,4 +1,4 @@
-# LIMONADE BLOG EXAMPLE #                                                
+# LIMONADE BLOG EXAMPLE #
 
 by [Fabrice Luraine](http://github.com/sofadesign/) and [Mathias Standaert](http://github.com/organicweb/)
                                                                          
@@ -14,7 +14,7 @@ in a production environement.
 * SQLite 3
 * PHP 5.2.x > with PDO and PDO_sqlite extensions
                                                                          
-## Getting Started ##                                                            
+## Getting Started ##
 
 * [Download](http://github.com/sofadesign/limonade-blog-example/zipball/master) and extract the code
 * place it in a folder under the docroot your favorite webserver
@@ -22,7 +22,7 @@ in a production environement.
 * call the `setup.php` in your browser
 
                                                                          
-## License ##                                                            
+## License ##
                                                                          
 Copyright (c) 2009 Fabrice Luraine, Mathias Standaert                    
                                                                          
