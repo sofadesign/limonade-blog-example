@@ -1,6 +1,6 @@
 <?php
 /**
- * Return an array containing ist of posts
+ * Return an array containing list of posts
  *
  * @return array
  */
