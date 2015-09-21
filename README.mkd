@@ -4,7 +4,7 @@ by [Fabrice Luraine](http://github.com/sofadesign/) and [Mathias Standaert](http
                                                                          
                                                         
 This basic blog application will show you how to use                     
-the [Limonade PHP](http://limonade-php.github.com/) micro-framework  
+the [Limonade PHP](http://limonade-php.github.io/) micro-framework  
                                                                          
 This code is for learning purpose and is not intended to be used "as is" 
 in a production environement.                                            
