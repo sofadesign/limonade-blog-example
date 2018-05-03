@@ -36,7 +36,7 @@ $db_file_name = $localhost ? 'dev.db' : 'prod.db';
       
       ?>
       <p>Setup succesful. <a href="index.php">Let's go !</a></p>
-      <?
+      <?php
       
     }
     catch(Exception $e)
@@ -44,7 +44,7 @@ $db_file_name = $localhost ? 'dev.db' : 'prod.db';
       
       ?>
       <p><strong>Setup failed:</strong> <code><?=$e?></code>
-      <?
+      <?php
       
     }
 ?>

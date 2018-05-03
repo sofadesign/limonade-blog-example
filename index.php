@@ -197,4 +197,3 @@ dispatch_delete('/posts/:id', 'blog_posts_destroy');
 # 4. Running the limonade blog app
 run();
 
-?>

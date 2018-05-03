@@ -12,12 +12,12 @@
 <body>
   <h1>Limonade blog example</h1>
   <div id="content">
-    <?= $content; ?>
+    <?php echo $content; ?>
   </div>
 <hr>
 <p id="nav">
-  <a href="<?=url_for('posts')?>">List all posts</a> | 
-  <a href="<?=url_for('posts','new')?>">Create a new post</a> 
+  <a href="<?php echo url_for('posts')?>">List all posts</a> | 
+  <a href="<?php echo url_for('posts','new')?>">Create a new post</a> 
 </p>
 </body>
 </html>
