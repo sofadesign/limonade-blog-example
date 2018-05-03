@@ -43,7 +43,7 @@ $db_file_name = $localhost ? 'dev.db' : 'prod.db';
     {
       
       ?>
-      <p><strong>Setup failed:</strong> <code><?=$e?></code>
+      <p><strong>Setup failed:</strong> <code><?php echo e?></code>
       <?php
       
     }
