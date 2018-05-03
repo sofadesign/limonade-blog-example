@@ -108,4 +108,3 @@ SQL;
 	return $stmt->execute();
 }
 
-?>
