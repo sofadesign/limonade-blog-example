@@ -11,16 +11,16 @@
     <?php endif; ?>
     <p>
       <label for="post_title">Title</label>
-      <input type="text" name="post[title]" value="<?=h($post['title']);?>" id="post_title">
+      <input type="text" name="post[title]" value="<?php echo h($post['title']);?>" id="post_title">
     </p>
     <p>
       <label for="post_body">Body</label>
-      <textarea name="post[body]" id="post_body"rows="8" cols="40"><?=h($post['body']);?></textarea>
+      <textarea name="post[body]" id="post_body"rows="8" cols="40"><?php echo h($post['body']);?></textarea>
     </p>
     
     <p>
-      <input type="submit" value="<?= empty($post['id']) ? "Create" : "Update" ?> &rarr;">
-      or <a href="<?=$action?>">cancel</a>
+      <input type="submit" value="<?php echo empty($post['id']) ? "Create" : "Update" ?> &rarr;">
+      or <a href="<?php echo action?>">cancel</a>
     </p>
   </fieldset>
 </form>
