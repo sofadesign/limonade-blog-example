@@ -1,4 +1,4 @@
-<div class="post" id="post-<?php echo post['id'];?>">
+<div class="post" id="post-<?php echo $post['id'];?>">
   <h2><?php echo h($post['title'])?></h2>
   <p class="date">Modified at: <?php echo strftime('%c', strtotime($post['modified_at']))?></p>
   <div class="content">
