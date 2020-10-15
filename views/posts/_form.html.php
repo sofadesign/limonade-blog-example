@@ -20,7 +20,7 @@
     
     <p>
       <input type="submit" value="<?php echo empty($post['id']) ? "Create" : "Update" ?> &rarr;">
-      or <a href="<?php echo action?>">cancel</a>
+      or <a href="<?php echo $action?>">cancel</a>
     </p>
   </fieldset>
 </form>
